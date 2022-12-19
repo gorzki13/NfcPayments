@@ -28,148 +28,100 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class Terminal extends AppCompatActivity {
 
 
     public static final String Error_Detected="No NFC Tag Detected";
     public static final String Write_Success="Data written";
     public static final String Write_error="write error";
-  DatabaseHelper myDb;
+    DatabaseHelper myDb;
 
-   NfcAdapter nfcAdapter;
-   PendingIntent pendingIntent;
-   IntentFilter writingTagFilters[];
-   boolean writeMode=true;
-   Tag myTag;
+    NfcAdapter nfcAdapter;
+    PendingIntent pendingIntent;
+    IntentFilter writingTagFilters[];
+    boolean writeMode=true;
+    Tag myTag;
     Context context;
-    TextView edit_message;
-    TextView nfc_contents;
-    TextView idinput;
-    Button ActivateButton;
 
+    TextView nfc_contents;
+
+    Button SubButton;
+    Button AddButton;
+    TextView BalanceCount;
     ImageView imageView;
     String text="";
     List<User> usersList=new ArrayList<User>();
     int userCounter=0;
     int currentuserid;
     User currentuser;
-    Button btnviewAll;
-    Button btndelete;
-    Button btniddelete;
-   @Override
+
+
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_terminal);
 
-        btnviewAll = findViewById(R.id.btnviewall);
+
         imageView=(ImageView) findViewById(R.id.imageView);
         imageView.setImageResource(R.drawable.nfc);
-        edit_message=(TextView) findViewById(R.id.edit_message);
+
         nfc_contents= (TextView) findViewById(R.id.nfc_contents);
-        ActivateButton= findViewById(R.id.ActivateButton);
 
-       btndelete=findViewById(R.id.btndelete);
-       myDb= new DatabaseHelper(this);
-       idinput=findViewById(R.id.idinput);
-       btniddelete=findViewById(R.id.btndeletebyid);
-       viewAll();
+        SubButton=findViewById(R.id.subbalance);
+        AddButton=findViewById(R.id.addbalance);
+        BalanceCount=findViewById(R.id.balancecount);
 
+        myDb= new DatabaseHelper(this);
 
-
-
-
-      Intent i = new Intent(this, appmodechoice.class);
-       startActivity(i);
-     context=this;
-       btnviewAll.setOnClickListener(
-               new View.OnClickListener() {
-                   @Override
-                   public void onClick(View v) {
-                       Cursor res = myDb.getAllData();
-
-                       if(res.getCount() == 0) {
-
-                           showMessage("Error","Nothing found");
-                           Toast.makeText(context,"dd",Toast.LENGTH_LONG).show();
-                           return;
-                       }
-
-                       StringBuffer buffer = new StringBuffer();
-                       while (res.moveToNext()) {
-                           buffer.append("Id :"+ res.getString(0)+"\n");
-                           buffer.append("TagID :"+ res.getString(1)+"\n");
-                           buffer.append("Name :"+ res.getString(2)+"\n");
-                           buffer.append("Balance :"+ res.getString(3)+"\n");
-                       }
-                       showMessage("Data",buffer.toString());
-                   }
-               }
-       );
+        viewAll();
 
 
 
-       btndelete.setOnClickListener(new View.OnClickListener() {
-           @Override
-           public void onClick(View view) {
-              myDb.deleteData(String.valueOf(currentuserid));
-           }
-       });
 
-       btniddelete.setOnClickListener(new View.OnClickListener() {
-           @Override
-           public void onClick(View view) {
-                String text="";
-                text=idinput.getText().toString();
-               myDb.deleteData(text);
-           }
 
-       });
 
-        ActivateButton.setOnClickListener(new View.OnClickListener() {
+        context=this;
+
+        AddButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
 
-                imageView.setImageResource(R.drawable.ua);
-                try{
-                    if(myTag==null){
 
-                    }else{
-                       write(""+edit_message.getText()+toString(),myTag);
-                    }
-                }catch(IOException e){
-                    e.printStackTrace();
-                }catch(FormatException e){
-                    e.printStackTrace();
-                }
-                userCounter++;
-                User u=new User(userCounter, edit_message.getText().toString(),0.0f);
-                currentuser=u;
-               currentuserid=userCounter;
-               myDb.insertData(String.valueOf(u.getId()), u.getName(), String.valueOf(u.getBalance()));
-                usersList.add(u);
-                Toast.makeText(context,"user added",Toast.LENGTH_LONG).show();
+
+                imageView.setImageResource(R.drawable.ba);
                 Cursor res = myDb.getAllData();
-                StringBuffer buffer = new StringBuffer();
+
                 while (res.moveToNext()) {
                     if(res.getString(1).equals(String.valueOf(currentuserid))){
-
-
-                        buffer.append("Id :"+ res.getString(0)+"\n");
-                        buffer.append("TagID :"+ res.getString(1)+"\n");
-                        buffer.append("Name :"+ res.getString(2)+"\n");
-                        buffer.append("Balance :"+ res.getString(3)+"\n");
-
-
-
+                        float balance=res.getFloat(3)+ Float.parseFloat(BalanceCount.getText().toString());
+                        myDb.updateData(res.getString(0),res.getString(1),res.getString(2),String.valueOf(balance));
                     }
-                    nfc_contents.setText(buffer);
                 }
+            }
+        });
+        SubButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
 
+
+                imageView.setImageResource(R.drawable.bs);
+                Cursor res = myDb.getAllData();
+                while (res.moveToNext()) {
+                    if(res.getString(1).equals(String.valueOf(currentuserid))){
+                        float balance=res.getFloat(3)- Float.parseFloat(BalanceCount.getText().toString());
+                        myDb.updateData(res.getString(0),res.getString(1),res.getString(2),String.valueOf(balance));
+                    }
+                }
 
 
 
             }
         });
+
+
+
+
 
         nfcAdapter=NfcAdapter.getDefaultAdapter(this);
         if(nfcAdapter==null){
@@ -180,21 +132,21 @@ public class MainActivity extends AppCompatActivity {
         pendingIntent=PendingIntent.getActivity(this,0,new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),0);
         IntentFilter tagDetected=new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
         tagDetected.addCategory(Intent.CATEGORY_DEFAULT);
-       writingTagFilters=new IntentFilter[]{tagDetected};
+        writingTagFilters=new IntentFilter[]{tagDetected};
     }
 
 
 
 
 
-@Override
+    @Override
     protected void  onNewIntent(Intent intent){
-       super.onNewIntent(intent);
-       setIntent((intent));
-       readfromIntent(intent);
-       if(NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())){
-           myTag=intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-       }
+        super.onNewIntent(intent);
+        setIntent((intent));
+        readfromIntent(intent);
+        if(NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())){
+            myTag=intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        }
     }
     @Override
     public void onPause(){
@@ -298,7 +250,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-     if(!find) {
+        if(!find) {
             imageView.setImageResource(R.drawable.ng);
             Toast.makeText(context,"cant find this user",Toast.LENGTH_LONG).show();
         }
@@ -328,5 +280,6 @@ public class MainActivity extends AppCompatActivity {
         ndef.close();
 
     }
+
 
 }
